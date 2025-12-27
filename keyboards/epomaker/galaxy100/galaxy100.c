@@ -959,13 +959,16 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     }
 
     if (host_keyboard_led_state().caps_lock)
-        rgb_matrix_set_color(HS_RGB_INDEX_CAPS, 0x20, 0x20, 0x20);
-    else
-        rgb_matrix_set_color(HS_RGB_INDEX_CAPS, RGB_BLACK);
+        rgb_matrix_set_color(HS_RGB_INDEX_CAPS, 0xFF, 0xFF, 0xFF);  // White when Caps Lock ON
+    // When Caps Lock is OFF, let normal RGB effect show through
+    
+    if (host_keyboard_led_state().num_lock)
+        rgb_matrix_set_color(HS_RGB_INDEX_NUM_LOCK, 0xFF, 0xFF, 0xFF);  // White when Num Lock ON
+    // When Num Lock is OFF, let normal RGB effect show through
+    
     if (!keymap_is_mac_system() && keymap_config.no_gui)
-        rgb_matrix_set_color(HS_RGB_INDEX_WIN_LOCK, 0x20, 0x20, 0x20);
-    else
-        rgb_matrix_set_color(HS_RGB_INDEX_WIN_LOCK, RGB_BLACK);
+        rgb_matrix_set_color(HS_RGB_INDEX_WIN_LOCK, 0xFF, 0xFF, 0xFF);  // White when Win Lock ON
+    // When Win Lock is OFF, let normal RGB effect show through
 
 #ifdef WIRELESS_ENABLE
     rgb_matrix_wls_indicator();
