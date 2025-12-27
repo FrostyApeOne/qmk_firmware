@@ -327,7 +327,7 @@ bool process_record_wls(uint16_t keycode, keyrecord_t *record) {
 }
 #endif
 
-bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+bool process_record_epomaker(uint16_t keycode, keyrecord_t *record) {
 
     if (test_white_light_flag && record->event.pressed) {
         test_white_light_flag = false;
@@ -372,6 +372,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 }
 bool rk_bat_req_flag;
 bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
+    if (process_record_epomaker(keycode, record) != true) {
+        return false;
+    }
 
     if (process_record_user(keycode, record) != true) {
         return false;
@@ -384,7 +387,7 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 #endif
 
     switch (keycode) {
-        case HS_BATQ: { 
+        case HS_BATQ: {
             rk_bat_req_flag = record->event.pressed;
             return false;
         } break;
@@ -445,7 +448,7 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             if (record->event.pressed) {
                 if (rgb_matrix_get_val() <= RGB_MATRIX_VAL_STEP) {
                     rgb_blink_dir();
-            
+
                     rgb_matrix_set_color_all(0, 0, 0);
                     start_hsv.v = 0;
                 } else {
@@ -795,12 +798,12 @@ void bat_indicators(void) {
         // rgb_matrix_set_color(8, 0x00, 0xFF, 0x00);
         // if (!led_chaning) rgb_matrix_set_color(HS_MATRIX_BLINK_INDEX_BAT, 0x00, 0x00, 0x00);
     } else if (charging_state) {
-        
+
         battery_process_time = 0;
         // Disabled red battery indicator
         // rgb_matrix_set_color(HS_RGB_INDEX_BAT, 0xFF, 0x00, 0x00);
     } else if (*md_getp_bat() <= 15) {
-       
+
         // Disabled red low battery indicator
         // rgb_matrix_hs_bat_set(HS_RGB_INDEX_BAT, (RGB){0xFF, 0x00, 0x00}, 250, 1);
         // }
@@ -960,11 +963,11 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     if (host_keyboard_led_state().caps_lock)
         rgb_matrix_set_color(HS_RGB_INDEX_CAPS, 0xFF, 0xFF, 0xFF);  // White when Caps Lock ON
     // When Caps Lock is OFF, let normal RGB effect show through
-    
+
     if (host_keyboard_led_state().num_lock)
         rgb_matrix_set_color(HS_RGB_INDEX_NUM_LOCK, 0xFF, 0xFF, 0xFF);  // White when Num Lock ON
     // When Num Lock is OFF, let normal RGB effect show through
-    
+
     if (!keymap_is_mac_system() && keymap_config.no_gui)
         rgb_matrix_set_color(HS_RGB_INDEX_WIN_LOCK, 0xFF, 0xFF, 0xFF);  // White when Win Lock ON
     // When Win Lock is OFF, let normal RGB effect show through
@@ -986,7 +989,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     }
 
 #endif
-    
+
     rgb_matrix_hs_indicator();
 
     rgb_matrix_start_rec();
@@ -1019,7 +1022,7 @@ void hs_reset_settings(void) {
 
     eeconfig_read_keymap(&keymap_config);
 
-#if defined(NKRO_ENABLE) && defined(FORCE_NKRO)
+#if defined(NKRO_ENABLE) && defined(NKRO_DEFAULT_ON)
     keymap_config.nkro = 0;
     eeconfig_update_keymap(&keymap_config);
 #endif
