@@ -3,6 +3,9 @@
 
 #pragma once
 
+/* Keep USB connection active even in wireless mode (required for VIA) */
+#define KEEP_USB_CONNECTION_IN_WIRELESS_MODE
+
 #define USB_POWER_EN_PIN                    B1 // USB ENABLE pin
 #define LED_POWER_EN_PIN                    A5 // LED ENABLE pin
 #define HS_BAT_CABLE_PIN                    A7 // USB insertion detection pin
