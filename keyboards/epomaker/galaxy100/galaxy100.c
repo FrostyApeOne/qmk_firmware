@@ -797,13 +797,12 @@ void bat_indicators(void) {
     } else if (charging_state) {
         
         battery_process_time = 0;
-        // if (!led_status && rgb_matrix_get_val()) {
-            rgb_matrix_set_color(8, 0xFF, 0x00, 0x00);
-        // }
+        // Disabled red battery indicator
+        // rgb_matrix_set_color(HS_RGB_INDEX_BAT, 0xFF, 0x00, 0x00);
     } else if (*md_getp_bat() <= 15) {
        
-        // if (!led_status && rgb_matrix_get_val()) {
-            rgb_matrix_hs_bat_set(8, (RGB){0xFF, 0x00, 0x00}, 250, 1);
+        // Disabled red low battery indicator
+        // rgb_matrix_hs_bat_set(HS_RGB_INDEX_BAT, (RGB){0xFF, 0x00, 0x00}, 250, 1);
         // }
         if (*md_getp_bat() <= 0) {
             if (!battery_process_time) {
