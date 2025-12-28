@@ -197,9 +197,34 @@ void suspend_wakeup_init_kb(void) {
 bool lpwr_is_allow_timeout_hook(void) {
 
     if (wireless_get_current_devs() == DEVS_USB) {
+        // Allow timeout when USB is suspended (computer is sleeping)
+        if (USB_DRIVER.state == USB_SUSPENDED) {
+            return true;
+        }
         return false;
     }
 
+    return true;
+}
+
+bool lpwr_is_allow_presleep_hook(void) {
+    extern bool charging_state;
+    
+    // In USB mode: DON'T disconnect USB - keep it connected for remote wakeup
+    if (wireless_get_current_devs() == DEVS_USB) {
+        // Just return true without disconnecting USB
+        // This allows USB remote wakeup to work properly
+        return true;
+    }
+    
+    // For wireless modes: disconnect USB if not charging (original behavior)
+    if (!charging_state) {
+        if (USB_DRIVER.state != USB_STOP) {
+            usb_power_disconnect();
+            usbDisconnectBus(&USBD1);
+            usbStop(&USBD1);
+        }
+    }
     return true;
 }
 
@@ -1043,4 +1068,11 @@ void lpwr_wakeup_hook(void) {
     gpio_write_pin_high(LED_POWER_EN_PIN);
     gpio_write_pin_high(A9);
     gpio_write_pin_high(HS_LED_BOOSTING_PIN);
+    
+    // Send USB remote wakeup signal to wake the PC
+    if (wireless_get_current_devs() == DEVS_USB && USB_DRIVER.state == USB_SUSPENDED) {
+        if (USB_DRIVER.status & 2U) {  // Check if remote wakeup is enabled by host
+            usbWakeupHost(&USB_DRIVER);
+        }
+    }
 }

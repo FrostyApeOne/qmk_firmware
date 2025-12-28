@@ -113,6 +113,10 @@ This keyboard was migrated from an older QMK firmware version. The following cha
 
 8. **Custom Keycode Aliases**: Added short form aliases for custom keycodes in `keyboard.json` to suppress build warnings
 
+9. **USB Suspend/Sleep**: Fixed `lpwr_is_allow_timeout_hook()` to allow keyboard to enter low power mode when USB is suspended (computer sleeping), while still preventing unwanted timeouts when USB is active
+
+10. **USB Remote Wakeup**: Added `lpwr_is_allow_presleep_hook()` override to keep USB connected during sleep (instead of disconnecting), and added USB remote wakeup signal in `lpwr_wakeup_hook()` to properly wake the PC when a key is pressed
+
 ### Custom Keycodes
 
 | Keycode | Alias | Description |
