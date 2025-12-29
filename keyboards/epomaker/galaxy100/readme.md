@@ -115,7 +115,13 @@ This keyboard was migrated from an older QMK firmware version. The following cha
 
 9. **USB Suspend/Sleep**: Fixed `lpwr_is_allow_timeout_hook()` to allow keyboard to enter low power mode when USB is suspended (computer sleeping), while still preventing unwanted timeouts when USB is active
 
-10. **USB Remote Wakeup**: Added `lpwr_is_allow_presleep_hook()` override to keep USB connected during sleep (instead of disconnecting), and added USB remote wakeup signal in `lpwr_wakeup_hook()` to properly wake the PC when a key is pressed
+10. **USB Remote Wakeup**: Added `lpwr_is_allow_presleep_hook()` override to keep USB connected during sleep in USB mode (for remote wakeup), while preserving original behavior for wireless modes (don't touch USB). Also added USB remote wakeup signal in `lpwr_wakeup_hook()` to properly wake the PC when a key is pressed
+
+11. **Bluetooth Sleep/Wake (stock-like)**: Fixed BT sleep so **any keypress wakes the keyboard** and it resumes scanning/reconnects when the PC wakes (removed forced `MD_SND_CMD_DEVCTRL_USB` in the BT sleep path; added `hs_wls_user_activity()` on keypress).
+
+12. **RGB Resume on BT Wake**: Added `RGB_MATRIX_SLEEP` and switched wireless idle sleep to use `rgb_matrix_set_suspend_state(true/false)` so RGB turns back on immediately when the keyboard wakes (even before the host reconnects).
+
+13. **USB Mode LEDs Turning Off**: Prevented the wireless idle-sleep logic from suspending RGB while in `DEVS_USB`, and added a safety auto-exit so LEDs can’t get “stuck off” in USB mode.
 
 ### Custom Keycodes
 

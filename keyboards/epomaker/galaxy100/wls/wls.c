@@ -3,6 +3,63 @@
 static ioline_t col_pins[MATRIX_COLS] = MATRIX_COL_PINS;
 // static ioline_t row_pins[MATRIX_COLS] = MATRIX_ROW_PINS;
 
+// Light sleep for wireless modes:
+// - Turns off RGB/indicators after timeout
+// - Keeps MCU running (no deep STOP), so any keypress can "wake" immediately
+static bool hs_wls_idle_sleep = false;
+#ifdef RGB_MATRIX_ENABLE
+static bool hs_wls_idle_rgb_enabled = false;
+static void hs_wls_idle_sleep_enter(void) {
+    // Never enter "wireless idle sleep" while in USB mode
+    if (wireless_get_current_devs() == DEVS_USB) {
+        return;
+    }
+    if (hs_wls_idle_sleep) {
+        return;
+    }
+    hs_wls_idle_sleep = true;
+    hs_wls_idle_rgb_enabled = rgb_matrix_is_enabled();
+    if (hs_wls_idle_rgb_enabled) {
+        // Turn LEDs fully off, but keep RGB enabled so it can resume immediately.
+        rgb_matrix_set_suspend_state(true);
+    }
+}
+static void hs_wls_idle_sleep_exit(void) {
+    // If we switched to USB mode, ensure LEDs are not stuck suspended
+    // (this can happen if we entered idle sleep in wireless mode).
+    if (wireless_get_current_devs() == DEVS_USB) {
+        hs_wls_idle_sleep = false;
+    }
+    if (!hs_wls_idle_sleep) {
+        return;
+    }
+    hs_wls_idle_sleep = false;
+    if (hs_wls_idle_rgb_enabled) {
+        rgb_matrix_set_suspend_state(false);
+        // Force a restart of the RGB task so LEDs come back immediately
+        rgb_matrix_mode_noeeprom(rgb_matrix_get_mode());
+    }
+    hs_rgb_blink_set_timer(timer_read32());
+}
+#else
+static void hs_wls_idle_sleep_enter(void) { hs_wls_idle_sleep = true; }
+static void hs_wls_idle_sleep_exit(void)  { hs_wls_idle_sleep = false; hs_rgb_blink_set_timer(timer_read32()); }
+#endif
+
+void hs_wls_user_activity(void) {
+    // Only meaningful in wireless modes
+    if (wireless_get_current_devs() == DEVS_USB) {
+        return;
+    }
+
+    // If we're in keyboard-side idle sleep, wake visuals first
+    hs_wls_idle_sleep_exit();
+
+    // Reassert current device selection to the wireless module so it starts scanning/reconnecting.
+    uint8_t dev = wireless_get_current_devs();
+    wireless_devs_change(dev, dev, false);
+}
+
 bool hs_modeio_detection(bool update, uint8_t *mode, uint8_t lsat_btdev) {
     static uint32_t scan_timer = 0x00;
 
@@ -47,6 +104,7 @@ bool hs_modeio_detection(bool update, uint8_t *mode, uint8_t lsat_btdev) {
 
     if (sw_mode) {
         hs_rgb_blink_set_timer(timer_read32());
+        hs_wls_idle_sleep_exit();
         suspend_wakeup_init();
         return true;
     }
@@ -81,9 +139,26 @@ bool hs_rgb_blink_hook() {
     static uint8_t last_status;
     uint32_t timeout = HS_SLEEP_TIMEOUT;
   
+    // USB mode: never keep LEDs in wireless idle sleep
+    if (wireless_get_current_devs() == DEVS_USB && hs_wls_idle_sleep) {
+        hs_wls_idle_sleep_exit();
+    }
+
     if (last_status != *md_getp_state()) {
         last_status = *md_getp_state();
         hs_rgb_blink_set_timer(0x00);
+        // If we reconnect, exit idle sleep so indicators can run again
+        if (*md_getp_state() == MD_STATE_CONNECTED) {
+            hs_wls_idle_sleep_exit();
+        }
+    }
+
+    // While idling in wireless sleep, keep everything off until user interaction or reconnect
+    if (hs_wls_idle_sleep) {
+        if (*md_getp_state() == MD_STATE_CONNECTED) {
+            hs_wls_idle_sleep_exit();
+        }
+        return true;
     }
 
     switch (*md_getp_state()) {
@@ -99,9 +174,8 @@ bool hs_rgb_blink_hook() {
             } else {
                 if ((timer_elapsed32(hs_rgb_blink_get_timer()) >= HS_LBACK_TIMEOUT) && !rgbrec_is_started()) {
                     hs_rgb_blink_set_timer(timer_read32());
-                    md_send_devctrl(MD_SND_CMD_DEVCTRL_USB);
-                    wait_ms(200);
-                    lpwr_set_timeout_manual(true);
+                    // Enter light idle sleep instead of deep STOP (keeps keypress wake working)
+                    hs_wls_idle_sleep_enter();
                 }
             }
         } break;
@@ -116,7 +190,8 @@ bool hs_rgb_blink_hook() {
                 if (timer_elapsed32(hs_rgb_blink_get_timer()) >= timeout && !rgbrec_is_started()) {
                     hs_rgb_blink_set_timer(timer_read32());
                     clear_keyboard();
-                    lpwr_set_timeout_manual(true);
+                    // Enter light idle sleep instead of deep STOP (keeps keypress wake working)
+                    hs_wls_idle_sleep_enter();
                 }
             }
         } break;
@@ -128,9 +203,8 @@ bool hs_rgb_blink_hook() {
             } else {
                 if (timer_elapsed32(hs_rgb_blink_get_timer()) >= HS_PAIR_TIMEOUT && !rgbrec_is_started()) {
                     hs_rgb_blink_set_timer(timer_read32());
-                    md_send_devctrl(MD_SND_CMD_DEVCTRL_USB);
-                    wait_ms(200);
-                    lpwr_set_timeout_manual(true);
+                    // Enter light idle sleep instead of deep STOP (keeps keypress wake working)
+                    hs_wls_idle_sleep_enter();
                 }
             }
         } break;

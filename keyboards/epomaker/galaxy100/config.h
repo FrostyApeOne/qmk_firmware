@@ -80,6 +80,9 @@
 /* RGB Matrix */
 #define RGB_MATRIX_FRAMEBUFFER_EFFECTS
 #define RGB_MATRIX_KEYPRESSES
+// Needed so we can suspend RGB output (turn LEDs fully off) and resume cleanly
+// without toggling the user's RGB enable setting.
+#define RGB_MATRIX_SLEEP
 
 /* WS2812 */
 #define WS2812_SPI_DRIVER  SPIDM2

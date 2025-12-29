@@ -204,27 +204,22 @@ bool lpwr_is_allow_timeout_hook(void) {
         return false;
     }
 
-    return true;
+    // In wireless modes (BT/2.4G) we avoid deep STOP because it prevents reliable
+    // "press any key to wake keyboard" behavior on this board.
+    // Battery-critical path may still force deeper sleep via other mechanisms.
+    return false;
 }
 
 bool lpwr_is_allow_presleep_hook(void) {
-    extern bool charging_state;
-    
-    // In USB mode: DON'T disconnect USB - keep it connected for remote wakeup
+    // USB mode: Keep USB connected for remote wakeup (don't disconnect)
+    // Original would disconnect when not charging, but we keep it for wake support
     if (wireless_get_current_devs() == DEVS_USB) {
-        // Just return true without disconnecting USB
-        // This allows USB remote wakeup to work properly
+        // Don't disconnect USB - this allows USB remote wakeup to work
         return true;
     }
     
-    // For wireless modes: disconnect USB if not charging (original behavior)
-    if (!charging_state) {
-        if (USB_DRIVER.state != USB_STOP) {
-            usb_power_disconnect();
-            usbDisconnectBus(&USBD1);
-            usbStop(&USBD1);
-        }
-    }
+    // Wireless modes (BT/2.4G): Don't touch USB at all (original behavior)
+    // The original code only disconnected USB when in USB mode
     return true;
 }
 
@@ -397,6 +392,14 @@ bool process_record_epomaker(uint16_t keycode, keyrecord_t *record) {
 }
 bool rk_bat_req_flag;
 bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
+#ifdef WIRELESS_ENABLE
+    // In wireless mode, any keypress should wake the keyboard-side idle sleep and
+    // prompt the wireless module to resume scanning/reconnecting.
+    if (record->event.pressed && wireless_get_current_devs() != DEVS_USB) {
+        hs_wls_user_activity();
+    }
+#endif
+
     if (process_record_epomaker(keycode, record) != true) {
         return false;
     }
@@ -1068,7 +1071,7 @@ void lpwr_wakeup_hook(void) {
     gpio_write_pin_high(LED_POWER_EN_PIN);
     gpio_write_pin_high(A9);
     gpio_write_pin_high(HS_LED_BOOSTING_PIN);
-    
+
     // Send USB remote wakeup signal to wake the PC
     if (wireless_get_current_devs() == DEVS_USB && USB_DRIVER.state == USB_SUSPENDED) {
         if (USB_DRIVER.status & 2U) {  // Check if remote wakeup is enabled by host

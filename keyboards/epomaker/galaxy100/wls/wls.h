@@ -53,3 +53,8 @@ bool hs_rgb_blink_hook(void);
 bool hs_mode_scan(bool update, uint8_t moude, uint8_t lsat_btdev);
 bool hs_modeio_detection(bool update, uint8_t *mode, uint8_t lsat_btdev);
 void hs_rgb_blink_set_timer(uint32_t time);
+
+// Treat any keypress / user interaction as a wake event in wireless mode.
+// Exits the keyboard-side idle sleep (RGB off) and reasserts the current wireless device
+// so the module starts scanning/reconnecting without requiring the mode switch.
+void hs_wls_user_activity(void);
